@@ -1,0 +1,88 @@
+---
+title: "Analysis of STORM Data"
+author: "Haipeng Hu"
+date: "Friday, November 21, 2014"
+output: html_document
+---
+# Introduction
+
+  Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+  
+  This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+# Data Processing
+
+  The data is saved in an zipped csv file named "repdata_data_StormData.csv.bz2" and is readed into R with name "data".
+  
+```{r,cache = TRUE}
+data <- read.table("repdata_data_StormData.csv.bz2",header=TRUE,sep=",")
+```
+
+In order to investigate the harmful with respect to population health for different events, the number of death and injure were summarized into dataset "Injure" by event types
+
+```{r,cace=TRUE}
+Injure <- aggregate(cbind(FATALITIES, INJURIES)~EVTYPE, data = data, FUN= sum)
+```
+
+In order to investigate the properties damage of different event type, I further modified the dataset "data" by adding a new column named "propdmg" which convert the "PROPDMG" and "PROPDMGEXP" in to a single digtal number felecting the actual amount of properties damage caused by the event
+
+```{r, cache=TRUE}
+data$propdmg <- 0
+ndx = 1
+for (i in 1:nrow(data)){         # This for loop take about half hour
+    if (data$PROPDMGEXP[i] == "K") {ndx = 1000}
+    else if (data$PROPDMGEXP[i] == "M") {ndx = 1000000}
+    else if (data$PROPDMGEXP[i] =="B") {ndx = 1000000000}
+    else {ndx = 1}
+    data$propdmg[i] <- data$PROPDMG[i]*ndx
+}
+```
+
+then we summarize the propdmg by event type into data "Properties" 
+
+```{r, cache=TRUE}
+Properties <- aggregate(propdmg~EVTYPE, data = data, FUN= sum)
+```
+
+
+# Result
+## Events harmful to population healt
+  Exporing the dataset "Injure", we can see the event type caused maxim number of injure and death is tonado as shown below:
+
+```{r}
+Injure[Injure$FATALITIES == max(Injure$FATALITIES),]
+Injure[Injure$INJURIES == max(Injure$INJURIES),]
+```
+
+Here, the 10 event types that caused the most death and injured numbers are ploted below 
+
+```{r}
+Injure_death <- Injure[with(Injure, order(-FATALITIES)), ]
+
+plot(Injure_death$FATALITIES[1:10],type="h",main= "Ten Event types with highest death number", xlab = "Event Index",ylab ="Number of Death")
+legend("topright",legend=Injure_death$EVTYPE[1:10],cex=0.6)
+
+Injure_injured <- Injure[with(Injure, order(-INJURIES)), ] 
+plot(Injure_injured$INJURIES[1:10],type="h",main= "Ten Event types with highest Injured number", xlab = "Event Index",ylab ="Number of Injured")
+legend("topright",legend=Injure_injured$EVTYPE[1:10],cex=0.6)
+```
+
+we can easily find from this figure Tonado has the highest number of both Death and Injured. The following nine event types that also have high death and injured number are the same with same order.
+
+## Event which high properties damage.
+  
+  It is found that FLOOD is the event type which causes the most properties damage. the total amount is over 144.657 billion dollors.
+
+```{r}
+Properties[Properties$propdmg == max(Properties$propdmg),]
+```
+
+The figure below indicates the top 10 event types which cause the most properties damages. 
+
+```{r}
+Properties_ten <- Properties[with(Properties, order(-propdmg)), ] 
+plot(Properties_ten$propdmg[1:10],type="h",main= "Ten Event types with highest Properties Damage", xlab = "Event Index",ylab ="Properties Damage ($)")
+legend("topright",legend=Properties_ten$EVTYPE[1:10],cex=0.6)
+```
+
+This plot indicates the top 10 event types with high properties damage are FLOOD, HURRICANE/TYPHOONO, TORNADO, STROM SURGE, FLASH FLOOD, HAIL, HURRICANE, TROPICAL STORM, WINTER STROM and HIGH WIND.
